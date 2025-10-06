@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>আওয়ামী লীগ ক্যালকুলেটর</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Add html2canvas for capturing results as image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* ফন্ট: 'Inter' সাধারণত ভালো, কিন্তু বাংলার জন্য সিস্টেম ফন্ট ব্যবহার করা ভালো */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background-color: #f0f4f8; /* হালকা নীল ব্যাকগ্রাউন্ড */
+        }
+        .container-card {
+            max-width: 600px;
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .radio-label {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        /* অপশনগুলি এখন পুরো প্রস্থ জুড়ে থাকবে এবং সহজে ক্লিক করার উপযোগী হবে */
+        .radio-label:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        input[type="radio"]:checked + .radio-label {
+            background-color: #10b981; /* সবুজ */
+            color: white;
+            border-color: #059669;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="w-full">
+        <!-- মেইন কার্ড কন্টেইনার -->
+        <div class="container-card bg-white p-8 md:p-10 rounded-xl mx-auto border-t-8 border-green-600">
+
+            <!-- ১. ইন্ট্রো স্ক্রিন -->
+            <div id="intro-screen" class="text-center">
+                <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
+                    আওয়ামী লীগ ক্যালকুলেটর
+                </h1>
+                <p class="text-lg text-gray-600 mb-8">
+                    আপনার ব্যক্তিগত মতামত এবং দৃষ্টিভঙ্গি যাচাই করে দেখুন, আপনি কতটা আওয়ামী লীগ সমর্থক।
+                </p>
+                <button onclick="startQuiz()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition duration-200">
+                    শুরু করুন
+                </button>
+            </div>
+
+            <!-- ২. কুইজ স্ক্রিন -->
+            <div id="quiz-screen" class="hidden">
+                <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
+                    আওয়ামী লীগ ক্যালকুলেটর
+                </h1>
+                <!-- প্রশ্ন এবং উত্তর অপশন এখানে JavaScript দ্বারা লোড হবে -->
+                <div id="question-display" class="space-y-6 mb-8">
+                </div>
+
+                <!-- নেভিগেশন এবং ফলাফল বাটন -->
+                <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+                    <button id="prev-button" onclick="prevQuestion()" class="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-full transition duration-200" disabled>
+                        পূর্ববর্তী
+                    </button>
+                    <span id="progress-indicator" class="text-sm font-medium text-gray-500"></span>
+                    
+                    <button id="next-button" onclick="nextQuestion()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition duration-200">
+                        পরবর্তী
+                    </button>
+                    <button id="submit-button" onclick="calculateScore()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-full shadow-lg transition duration-200 hidden">
+                        ফলাফল দেখুন
+                    </button>
+                </div>
+            </div>
+
+            <!-- ৩. ফলাফল স্ক্রিন -->
+            <div id="result-screen" class="hidden text-center">
+                <!-- Content to be captured by html2canvas -->
+                <div id="result-content-to-capture" class="bg-white p-6 rounded-xl border border-green-200 shadow-lg">
+                    
+                    <!-- এই শিরোনামটি PNG-এ ক্যাপচার হবে -->
+                    <h1 class="text-3xl font-bold text-center text-gray-800 mb-6 pb-4 border-b border-green-100">
+                        আওয়ামী লীগ ক্যালকুলেটর
+                    </h1>
+
+                    <h2 class="text-2xl font-semibold text-gray-700 mb-4">আপনার স্কোর:</h2>
+                    <!-- পরিবর্তন: বক্সের স্টাইল এবং ব্যাকগ্রাউন্ড সরানো হয়েছে। ফন্টের আকার text-7xl করা হয়েছে হাইলাইট করার জন্য। -->
+                    <div id="score-display" class="text-7xl font-extrabold text-green-600 mb-8">
+                        <!-- শতাংশ এখানে দেখাবে -->
+                    </div>
+                    <p id="result-message" class="text-xl text-gray-600 mb-8"></p>
+
+                    <!-- ব্যবহারকারীর অনুরোধ অনুযায়ী যোগ করা হয়েছে: মাঝখানে, নিচে এবং হালকাভাবে -->
+                    <div class="text-center mt-4">
+                        <span class="text-xs text-gray-400">
+                            bal-calculator.vercel.app
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mt-8 space-y-4">
+                    <button onclick="saveResultAsPng()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition duration-200">
+                        ফলাফল PNG হিসেবে ডাউনলোড করুন
+                    </button>
+                    <button onclick="resetQuiz()" class="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-6 rounded-full transition duration-200 block w-1/2 mx-auto">
+                        আবার চেষ্টা করুন
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript লজিক -->
+    <script>
+        // আপনার প্রশ্নগুলির ডাটা স্ট্রাকচার (বাংলাতে)
+        // al_weight_score: ৫ মানে উত্তর ৫ হলে সর্বোচ্চ পয়েন্ট (৫) পাওয়া যাবে।
+        // al_weight_score: ১ মানে উত্তর ১ হলে সর্বোচ্চ পয়েন্ট (৫) পাওয়া যাবে।
+        const questionsData = [
+            { 
+                id: 1, 
+                text: "শেখ হাসিনা এখনও বাংলাদেশের প্রধানমন্ত্রী। আপনার মতামত কী?", 
+                maxScore: 5, 
+                options: ["পুরোপুরি দ্বিমত", "দ্বিমত", "মন্তব্য নেই", "একমত", "পুরোপুরি একমত"], 
+                al_weight_score: 5 
+            },
+            { 
+                id: 2, 
+                text: "জুলাই আন্দোলনের সময় ইন্টারনেট আপনা-আপনিই বন্ধ হয়ে গিয়েছিল।", 
+                maxScore: 5, 
+                options: ["পুরোপুরি দ্বিমত", "দ্বিমত", "মন্তব্য নেই", "একমত", "পুরোপুরি একমত"], 
+                al_weight_score: 5 
+            },
+            { 
+                id: 3, 
+                text: "যদি রাত পোহালে শোনা যেত.....", 
+                maxScore: 5, 
+                options: ["বঙ্গবন্ধু মরে নাই", "শেখ মুজিব মরে নাই", "শেখ হাসিনা মরে নাই", "মুজিব রঙ মেখে শুয়ে ছিলো", "বঙ্গবল্টু মরে নাই"], 
+                al_weight_score: 1 // অপশন ১ (বঙ্গবন্ধু মরে নাই) সর্বোচ্চ স্কোর বহন করে 
+            },
+            { 
+                id: 4, 
+                text: "আগেই ভালো ছিলাম....", 
+                maxScore: 5, 
+                options: ["পুরোপুরি একমত", "একমত", "মন্তব্য নেই", "দ্বিমত", "পুরোপুরি দ্বিমত"], 
+                al_weight_score: 1 // অপশন ১ ('পুরোপুরি একমত') সর্বোচ্চ স্কোর বহন করে (AL স্কোরিং রিভার্স করা হয়েছে)
+            },
+            { 
+                id: 5, 
+                text: "আওয়ামী লীগকে পুরোপুরি নিষিদ্ধ করা উচিত - এই বিষয়ে আপনার মতামত কী?", 
+                maxScore: 5, 
+                options: ["পুরোপুরি একমত", "একমত", "মন্তব্য নেই", "দ্বিমত", "পুরোপুরি দ্বিমত"], 
+                al_weight_score: 5 // অপশন ৫ ('পুরোপুরি দ্বিমত' - মানে নিষিদ্ধের বিপক্ষে, যা AL-পন্থী) সর্বোচ্চ স্কোর বহন করে
+            },
+            { 
+                id: 6, 
+                text: "স্বাধীনতার ঘোষক শেখ মুজিবর রহমান। আপনার মতামত কী?", 
+                maxScore: 5, 
+                options: ["পুরোপুরি একমত", "একমত", "মন্তব্য নেই", "দ্বিমত", "পুরোপুরি দ্বিমত (ঘোষক মেজর জিয়াউর রহমান)"], 
+                al_weight_score: 1 // অপশন ১ (পুরোপুরি একমত) সর্বোচ্চ স্কোর বহন করে
+            },
+            { 
+                id: 7, 
+                text: "আপনাকে যদি শেখ হাসিনার বিচার করার সুযোগ দেওয়া হয় আপনি কী করবেন?", 
+                maxScore: 5, 
+                options: ["মৃত্যুদণ্ড দেব", "যাবজ্জীবন কারাদণ্ড দেব (বাঁচবেই আর কতদিন 🤣)", "কিছুই করব না", "ক্ষমা করে দেব", "আবার বাংলাদেশের প্রধানমন্ত্রী বানাব"], 
+                al_weight_score: 5 // অপশন ৫ (আবার প্রধানমন্ত্রী বানাব) সর্বোচ্চ স্কোর বহন করে
+            },
+            { 
+                id: 8, 
+                text: "বিগত ১৭ বছরে টাকা পাচার, খুন, গুমের মতো ঘটনাগুলির সাথে আওয়ামী লীগ জড়িত... আপনার মতামত কী?", 
+                maxScore: 5, 
+                options: ["পুরোপুরি একমত", "একমত", "মন্তব্য নেই", "দ্বিমত", "পুরোপুরি দ্বিমত"], 
+                al_weight_score: 5 // অপশন ৫ ('পুরোপুরি দ্বিমত' - মানে AL জড়িত নয়, তাই AL-পন্থী) সর্বোচ্চ স্কোর বহন করে
+            },
+        ];
+
+        let userResponses = {}; 
+        let currentQuestionIndex = 0;
+        const totalQuestions = questionsData.length; // এখন মোট ৮টি প্রশ্ন
+
+        // কুইজ শুরু করার ফাংশন
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            userResponses = {};
+            document.getElementById('intro-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            renderCurrentQuestion();
+        }
+
+        // ব্যবহারকারীর উত্তর সংরক্ষণ
+        function updateResponse(questionId, score) {
+            userResponses[questionId] = parseInt(score);
+            updateNavigationButtons();
+            document.getElementById('question-message').textContent = ""; 
+        }
+
+        // নেভিগেশন বাটন এবং প্রোগ্রেস আপডেট করার ফাংশন
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('prev-button');
+            const nextBtn = document.getElementById('next-button');
+            const submitBtn = document.getElementById('submit-button');
+            const indicator = document.getElementById('progress-indicator');
+            const currentQ = questionsData[currentQuestionIndex];
+            const isAnswered = userResponses[currentQ.id] !== undefined;
+
+            indicator.textContent = `প্রশ্ন ${currentQuestionIndex + 1} / ${totalQuestions}`;
+
+            // পূর্ববর্তী বাটন স্টাইল ও স্টেট
+            prevBtn.disabled = currentQuestionIndex === 0;
+            prevBtn.classList.toggle('bg-gray-400', currentQuestionIndex === 0);
+            prevBtn.classList.toggle('bg-gray-600', currentQuestionIndex > 0);
+            prevBtn.classList.toggle('hover:bg-gray-700', currentQuestionIndex > 0);
+            prevBtn.classList.toggle('cursor-not-allowed', currentQuestionIndex === 0);
+
+
+            // পরবর্তী / ফলাফল বাটন স্টাইল ও স্টেট
+            if (currentQuestionIndex === totalQuestions - 1) {
+                // শেষ প্রশ্ন
+                nextBtn.classList.add('hidden');
+                submitBtn.classList.remove('hidden');
+                submitBtn.disabled = !isAnswered;
+                submitBtn.classList.toggle('opacity-50', !isAnswered);
+                submitBtn.classList.toggle('cursor-not-allowed', !isAnswered);
+            } else {
+                // মাঝের প্রশ্ন
+                nextBtn.classList.remove('hidden');
+                submitBtn.classList.add('hidden');
+                nextBtn.disabled = !isAnswered;
+                nextBtn.classList.toggle('opacity-50', !isAnswered);
+                nextBtn.classList.toggle('cursor-not-allowed', !isAnswered);
+            }
+        }
+
+        // বর্তমান প্রশ্ন রেন্ডার করার ফাংশন
+        function renderCurrentQuestion() {
+            const container = document.getElementById('question-display');
+            const q = questionsData[currentQuestionIndex];
+            const currentResponse = userResponses[q.id];
+
+            // অপশনগুলি কাস্টম টেক্সট সহ রেন্ডার করা
+            const optionsToRender = q.options.map((text, index) => ({ score: index + 1, label: text }));
+            
+            container.innerHTML = `
+                <div class="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <p class="text-xl font-semibold text-gray-800 mb-6">${currentQuestionIndex + 1}. ${q.text}</p>
+                    <div class="flex flex-col space-y-3 mt-4">
+                        <!-- রেডিও বাটন উল্লম্বভাবে রেন্ডার করা -->
+                        ${optionsToRender.map(option => `
+                            <div>
+                                <input type="radio" id="q${q.id}-${option.score}" name="q${q.id}" value="${option.score}" class="hidden" required
+                                    onchange="updateResponse(${q.id}, ${option.score})"
+                                    ${currentResponse === option.score ? 'checked' : ''}>
+                                <label for="q${q.id}-${option.score}" class="radio-label block w-full p-3 text-base font-medium text-left border-2 border-gray-300 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-200
+                                    ${currentResponse === option.score ? '!bg-green-600 !text-white !border-green-600 hover:!bg-green-700' : ''}">
+                                    ${option.label}
+                                </label>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <!-- কাস্টম মেসেজ বক্স -->
+                <div id="question-message" class="text-center text-red-500 mt-4 h-5"></div>
+            `;
+            updateNavigationButtons();
+        }
+
+        // পরবর্তী প্রশ্নে যাওয়ার ফাংশন
+        function nextQuestion() {
+            const currentQ = questionsData[currentQuestionIndex];
+            if (userResponses[currentQ.id] === undefined) {
+                document.getElementById('question-message').textContent = 'অনুগ্রহ করে এই প্রশ্নের উত্তর দিন।';
+                return;
+            }
+
+            if (currentQuestionIndex < totalQuestions - 1) {
+                currentQuestionIndex++;
+                renderCurrentQuestion();
+            }
+        }
+
+        // পূর্ববর্তী প্রশ্নে যাওয়ার ফাংশন
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderCurrentQuestion();
+            }
+        }
+
+        // স্কোর গণনা করার ফাংশন (কাস্টম ওয়েট সহ আপডেট করা হয়েছে)
+        function calculateScore() {
+            const currentQ = questionsData[currentQuestionIndex];
+            if (userResponses[currentQ.id] === undefined) {
+                document.getElementById('question-message').textContent = 'অনুগ্রহ করে শেষ প্রশ্নের উত্তর দিন।';
+                return;
+            }
+
+            let totalMaxPossibleScore = 0; 
+            let totalUserScore = 0; 
+
+            questionsData.forEach(q => {
+                const maxScore = q.maxScore || 5; 
+                const userChoice = userResponses[q.id];
+                const alWeight = q.al_weight_score || 5; 
+
+                // প্রতিটি প্রশ্নের সর্বোচ্চ স্কোর যোগ করা
+                totalMaxPossibleScore += maxScore;
+
+                // কাস্টম ওয়েট অনুযায়ী ব্যবহারকারীর স্কোর গণনা
+                let scoreContribution = 0;
+
+                if (alWeight === maxScore) {
+                    // যদি উত্তর ৫ হলে AL-পন্থী হয় (যেমন: 1=Low, 5=High)
+                    scoreContribution = userChoice;
+                } else if (alWeight === 1) {
+                    // যদি উত্তর ১ হলে AL-পন্থী হয় (যেমন: 1=High, 5=Low)
+                    // রিভার্স স্কেল: (maxScore - userChoice) + 1
+                    scoreContribution = (maxScore - userChoice) + 1;
+                } else {
+                    // যদি alWeight 1 বা maxScore না হয়, তবে এই প্রশ্নটিকে নিরপেক্ষ ধরে userChoice যোগ করা হচ্ছে
+                    scoreContribution = userChoice; 
+                }
+                
+                // শুধুমাত্র উত্তর দেওয়া প্রশ্নগুলোর স্কোর যোগ করা
+                if (userChoice !== undefined) {
+                    totalUserScore += scoreContribution;
+                }
+                
+            });
+            
+            // --- নরমালইজেশন লজিক ---
+            // সর্বনিম্ন সম্ভব AL স্কোর (যখন সব প্রশ্নের উত্তর ১ দেওয়া হয়): 8 * 1 = 8
+            const totalMinPossibleScore = totalQuestions * 1; 
+            // রেঞ্জ (Max Score - Min Score): 40 - 8 = 32
+            const scoreRange = totalMaxPossibleScore - totalMinPossibleScore;
+            
+            // নরমালইজড স্কোর (ইউজার স্কোর থেকে Min স্কোর বিয়োগ করে):
+            const normalizedScore = totalUserScore - totalMinPossibleScore;
+
+            // শতাংশ নির্ণয়: (নরমালইজড স্কোর / রেঞ্জ) * 100
+            const percentage = ((normalizedScore / scoreRange) * 100).toFixed(0);
+
+            // ফলাফল প্রদর্শন
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            document.getElementById('score-display').textContent = `${percentage}%`;
+
+            let message = "";
+            if (percentage >= 85) {
+                message = "অভিনন্দন! আপনি ১০০% দৃঢ় আওয়ামী লীগ সমর্থক। আপনার মতামত দলের নীতির সাথে সম্পূর্ণ মিলে যায়।";
+            } else if (percentage >= 65) {
+                message = "আপনার মতামত দারুণ সামঞ্জস্যপূর্ণ! আপনি দৃঢ়ভাবে আওয়ামী লীগের নীতিমালায় বিশ্বাসী।";
+            } else if (percentage >= 40) {
+                message = "আপনার মতামত মিশ্র প্রকৃতির। কিছু ক্ষেত্রে আওয়ামী লীগের প্রতি আপনার ঝোঁক রয়েছে, তবে আপনি নিরপেক্ষ দৃষ্টিভঙ্গিও পোষণ করেন।";
+            } else if (percentage >= 20) {
+                message = "আপনার অবস্থান বেশ নিরপেক্ষ, বা আপনার মতামত বিরোধী মতাদর্শের সাথে বেশি মিলে যায়।";
+            } else {
+                message = "আপনি আওয়ামী লীগের নীতির সাথে খুব কমই একমত। আপনি একটি ভিন্ন রাজনৈতিক মতাদর্শের দিকে ঝুঁকছেন।";
+            }
+
+            document.getElementById('result-message').textContent = message;
+        }
+
+        // --- নতুন PNG সেভ ফাংশন ---
+        function saveResultAsPng() {
+            const element = document.getElementById('result-content-to-capture');
+            
+            // প্রক্রিয়া চলাকালীন বাটন ডিসেবল করা
+            const shareButton = document.querySelector('[onclick="saveResultAsPng()"]');
+            const originalText = shareButton.textContent;
+            shareButton.textContent = 'প্রক্রিয়াকরণ হচ্ছে...';
+            shareButton.disabled = true;
+
+            html2canvas(element, { 
+                useCORS: true,
+                scale: 2, // উচ্চ রেজোলিউশনের জন্য
+                backgroundColor: '#ffffff' // নিশ্চিত করে যে ব্যাকগ্রাউন্ড সাদা
+            }).then(canvas => {
+                // ক্যানভাসকে PNG ইমেজে রূপান্তর করা
+                const image = canvas.toDataURL("image/png");
+                
+                // অস্থায়ী লিংক তৈরি করে ডাউনলোড ট্রিগার করা
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = `AwamiLeague_Score_${document.getElementById('score-display').textContent}_Result.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // বাটন পূর্বের অবস্থায় ফিরিয়ে আনা
+                shareButton.textContent = originalText;
+                shareButton.disabled = false;
+            }).catch(error => {
+                console.error("Error generating image:", error);
+                shareButton.textContent = originalText;
+                shareButton.disabled = false;
+            });
+        }
+
+        // কুইজ রিসেট করার ফাংশন
+        function resetQuiz() {
+            userResponses = {};
+            currentQuestionIndex = 0;
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('intro-screen').classList.remove('hidden');
+            document.getElementById('result-message').textContent = "";
+        }
+    </script>
+</body>
+</html>
